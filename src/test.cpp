@@ -7,7 +7,9 @@ using namespace Rcpp;
 using namespace keittlab;
 
 // [[Rcpp::export]]
-void test_map() {}
+void test_map() {
+  tuple::map([](auto&& x)->void{ Rcout << x << std::endl; }, std::make_tuple("test"));
+}
 
 // [[Rcpp::export]]
 void test_choose() {}

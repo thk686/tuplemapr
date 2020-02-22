@@ -63,19 +63,48 @@ constexpr decltype(auto) pick(Ts&&... ts) {
   return std::make_tuple(std::get<I>(fw<Ts>(ts))...);
 }
 
+template<typename F, typename... Ts>
+constexpr decltype(auto) map_first(F&& f, Ts&&... ts) {
+  return std::apply(fw<F>(f), pick<0>(fw<Ts>(ts)...));
+}
+
+template<typename T>
+constexpr bool is_void = std::is_same_v<void, T>;
+
+// https://codereview.stackexchange.com/a/193436
+
 template<typename F, std::size_t... Is, typename... Ts>
 constexpr decltype(auto) map_tuple_impl(F&& f, std::index_sequence<Is...>, Ts&&... ts) {
-  return std::make_tuple(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
+  using ret = decltype(map_first(fw<F>(f), fw<Ts>(ts)...));
+  if constexpr (is_void<ret>) {
+    (std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...)), ...);
+  } else if constexpr (std::is_lvalue_reference_v<ret>) {
+    return std::tie(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
+  } else if constexpr (std::is_rvalue_reference_v<ret>) {
+    return std::forward_as_tuple(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
+  } else {
+    return std::make_tuple(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
+  }
 }
 
 template<typename F, std::size_t... Is, typename... Ts>
 constexpr decltype(auto) map_array_impl(F&& f, std::index_sequence<Is...>, Ts&&... ts) {
-  return std::make_array(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
+  using ret = decltype(map_first(fw<F>(f), fw<Ts>(ts)...));
+  if constexpr (is_void<ret>) {
+    (std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...)), ...);
+  } else {
+    return std::make_array(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
+  }
 }
 
 template<typename F, std::size_t... Is, typename... Ts>
 constexpr decltype(auto) map_pair_impl(F&& f, std::index_sequence<Is...>, Ts&&... ts) {
-  return std::make_pair(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
+  using ret = decltype(map_first(fw<F>(f), fw<Ts>(ts)...));
+  if constexpr (is_void<ret>) {
+    (std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...)), ...);
+  } else {
+    return std::make_pair(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
+  }
 }
 
 template<typename F, std::size_t... Is, typename... Ts>
@@ -133,7 +162,7 @@ constexpr decltype(auto) map(F&& f, Ts&&... ts) {
   if constexpr (details::is_std_pair_v<T>) {
     return map_pair(fw<F>(f), fw<Ts>(ts)...);
   }
-  (void) std::tuple_size_v<T>;
+  static_cast<void>(std::tuple_size_v<T>);
 }
 
 // unary
