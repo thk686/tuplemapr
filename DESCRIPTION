@@ -1,0 +1,11 @@
+Package: tuplemapr
+Type: Package
+Title: C++ functions for working with compile-time fixed-length data
+Version: 1.0
+Date: 2020-02-18
+Author: Tim Keitt
+Maintainer: Tim Keitt<tkeitt@gmail.com>
+Description: This package provides C++ functions for manipulating compile-time fixed-length data, such as tuples and arrays. The core is tuple::map, which accepts an invokable and any number of tuples as arguments. It return a tuple containing the application of the invokable on the first elements, second elements, etc.
+License: GPL (>= 2)
+Imports: Rcpp (>= 1.0.3)
+LinkingTo: Rcpp

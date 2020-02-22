@@ -1,0 +1,3 @@
+useDynLib(tuplemapr, .registration=TRUE)
+exportPattern("^[[:alpha:]]+")
+importFrom(Rcpp, evalCpp)
