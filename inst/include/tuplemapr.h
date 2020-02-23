@@ -8,7 +8,6 @@
 #include <utility>
 #include <ostream>
 #include <type_traits>
-#include <experimental/array>
 
 namespace keittlab {
 namespace tuple {
@@ -86,7 +85,7 @@ constexpr decltype(auto) map_tuple_impl(F&& f, std::index_sequence<Is...>, Ts&&.
 
 template<typename F, std::size_t... Is, typename... Ts>
 constexpr decltype(auto) map_array_impl(F&& f, std::index_sequence<Is...>, Ts&&... ts) {
-  return std::make_array(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
+  return std::array{std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...};
 }
 
 template<typename F, std::size_t... Is, typename... Ts>
