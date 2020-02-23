@@ -12,6 +12,7 @@
 
 namespace keittlab {
 namespace tuple {
+namespace details {
 
 // https://stackoverflow.com/a/25909944/1691101
 
@@ -27,7 +28,8 @@ constexpr decltype(auto) fw(std::remove_reference_t<T>& t)
   return std::forward<T>(t);
 }
 
-namespace details {
+template<typename T>
+constexpr bool is_void = std::is_same_v<void, T>;
 
 // https://stackoverflow.com/a/16905404/1691101
 
@@ -64,21 +66,16 @@ constexpr decltype(auto) pick(Ts&&... ts) {
 }
 
 template<typename F, typename... Ts>
-constexpr decltype(auto) map_first(F&& f, Ts&&... ts) {
+constexpr decltype(auto) map0(F&& f, Ts&&... ts) {
   return std::apply(fw<F>(f), pick<0>(fw<Ts>(ts)...));
 }
-
-template<typename T>
-constexpr bool is_void = std::is_same_v<void, T>;
 
 // https://codereview.stackexchange.com/a/193436
 
 template<typename F, std::size_t... Is, typename... Ts>
 constexpr decltype(auto) map_tuple_impl(F&& f, std::index_sequence<Is...>, Ts&&... ts) {
-  using ret = decltype(map_first(fw<F>(f), fw<Ts>(ts)...));
-  if constexpr (is_void<ret>) {
-    (std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...)), ...);
-  } else if constexpr (std::is_lvalue_reference_v<ret>) {
+  using ret = decltype(map0(fw<F>(f), fw<Ts>(ts)...));
+  if constexpr (std::is_lvalue_reference_v<ret>) {
     return std::tie(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
   } else if constexpr (std::is_rvalue_reference_v<ret>) {
     return std::forward_as_tuple(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
@@ -89,30 +86,18 @@ constexpr decltype(auto) map_tuple_impl(F&& f, std::index_sequence<Is...>, Ts&&.
 
 template<typename F, std::size_t... Is, typename... Ts>
 constexpr decltype(auto) map_array_impl(F&& f, std::index_sequence<Is...>, Ts&&... ts) {
-  using ret = decltype(map_first(fw<F>(f), fw<Ts>(ts)...));
-  if constexpr (is_void<ret>) {
-    (std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...)), ...);
-  } else {
-    return std::make_array(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
-  }
+  return std::make_array(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
 }
 
 template<typename F, std::size_t... Is, typename... Ts>
 constexpr decltype(auto) map_pair_impl(F&& f, std::index_sequence<Is...>, Ts&&... ts) {
-  using ret = decltype(map_first(fw<F>(f), fw<Ts>(ts)...));
-  if constexpr (is_void<ret>) {
-    (std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...)), ...);
-  } else {
-    return std::make_pair(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
-  }
+  return std::make_pair(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
 }
 
 template<typename F, std::size_t... Is, typename... Ts>
 constexpr void map_void_impl(F&& f, std::index_sequence<Is...>, Ts&&... ts) {
   (std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...)), ...);
 }
-
-} // namespace details
 
 template<typename... Ts>
 using first_of = std::remove_reference_t<
@@ -126,43 +111,50 @@ using indices_spanning = std::make_index_sequence<
   >
 >;
 
+} // namespace details
+
 template<typename F, typename... Ts>
 constexpr decltype(auto) map_tuple(F&& f, Ts&&... ts) {
+  using namespace details;
   using T = first_of<Ts...>;
-  return details::map_tuple_impl(fw<F>(f), indices_spanning<T>{}, fw<Ts>(ts)...);
+  return map_tuple_impl(fw<F>(f), indices_spanning<T>{}, fw<Ts>(ts)...);
 }
 
 template<typename F, typename... Ts>
 constexpr decltype(auto) map_array(F&& f, Ts&&... ts) {
+  using namespace details;
   using T = first_of<Ts...>;
-  return details::map_array_impl(fw<F>(f), indices_spanning<T>{}, fw<Ts>(ts)...);
+  return map_array_impl(fw<F>(f), indices_spanning<T>{}, fw<Ts>(ts)...);
 }
 
 template<typename F, typename... Ts>
 constexpr decltype(auto) map_pair(F&& f, Ts&&... ts) {
+  using namespace details;
   using T = first_of<Ts...>;
-  return details::map_pair_impl(fw<F>(f), indices_spanning<T>{}, fw<Ts>(ts)...);
+  return map_pair_impl(fw<F>(f), indices_spanning<T>{}, fw<Ts>(ts)...);
 }
 
 template<typename F, typename... Ts>
 constexpr void map_void(F&& f, Ts&&... ts) {
+  using namespace details;
   using T = first_of<Ts...>;
-  details::map_void_impl(fw<F>(f), indices_spanning<T>{}, fw<Ts>(ts)...);
+  map_void_impl(fw<F>(f), indices_spanning<T>{}, fw<Ts>(ts)...);
 }
 
 template<typename F, typename... Ts>
 constexpr decltype(auto) map(F&& f, Ts&&... ts) {
+  using namespace details;
   using T = first_of<Ts...>;
-  if constexpr (details::is_std_tuple_v<T>) {
+  using ret = decltype(map0(fw<F>(f), fw<Ts>(ts)...));
+  if constexpr (is_void<ret>) {
+    map_void(fw<F>(f), fw<Ts>(ts)...);
+  } else if constexpr (is_std_pair_v<T>) {
+    return map_pair(fw<F>(f), fw<Ts>(ts)...);
+  } else if constexpr (is_std_array_v<T>) {
+    return map_array(fw<F>(f), fw<Ts>(ts)...);
+  } else {
     return map_tuple(fw<F>(f), fw<Ts>(ts)...);
   }
-  if constexpr (details::is_std_array_v<T>) {
-    return map_array(fw<F>(f), fw<Ts>(ts)...);
-  }
-  if constexpr (details::is_std_pair_v<T>) {
-    return map_pair(fw<F>(f), fw<Ts>(ts)...);
-  }
-  static_cast<void>(std::tuple_size_v<T>);
 }
 
 // unary
@@ -170,6 +162,7 @@ constexpr decltype(auto) map(F&& f, Ts&&... ts) {
 template<typename T>
 constexpr decltype(auto)
 sum(T&& t) {
+  using details::fw;
   return std::apply([](auto&&... xs) {
     return (0 + ... + xs);
   }, fw<T>(t));
@@ -178,6 +171,7 @@ sum(T&& t) {
 template<typename T>
 constexpr decltype(auto)
 mean(T&& t) {
+  using details::fw;
   return std::apply([](auto&&... xs) {
     return (0 + ... + xs) / static_cast<double>(sizeof...(xs));
   }, fw<T>(t));
@@ -186,6 +180,7 @@ mean(T&& t) {
 template<typename T>
 constexpr decltype(auto)
 all_true(T&& t) {
+  using details::fw;
   return std::apply([](auto&&... xs) {
     return (true && ... && xs);
   }, fw<T>(t));
@@ -194,6 +189,7 @@ all_true(T&& t) {
 template<typename T>
 constexpr decltype(auto)
 _not(T&& t) {
+  using details::fw;
   return map([](auto&& x) {
     return !x;
   }, fw<T>(t));
@@ -202,6 +198,7 @@ _not(T&& t) {
 template<typename T>
 constexpr decltype(auto)
 all_false(T&& t) {
+  using details::fw;
   return all_true(_not(fw<T>(t)));
 }
 
@@ -209,6 +206,7 @@ template<typename T>
 constexpr decltype(auto)
 any_true(T&& t) {
   bool v = false;
+  using details::fw;
   map_void([&v](auto&& x) {
     if (x) v = true;
   }, fw<T>(t));
@@ -218,6 +216,7 @@ any_true(T&& t) {
 template<typename T>
 constexpr decltype(auto)
 any_false(T&& t) {
+  using details::fw;
   return any_true(_not(t));
 }
 
@@ -225,6 +224,7 @@ any_false(T&& t) {
 template<typename T>
 constexpr decltype(auto)
 pow(T&& t, double exp) {
+  using details::fw;
   return map([exp](double base) {
     return std::pow(base, exp);
   }, fw<T>(t));
@@ -234,6 +234,7 @@ pow(T&& t, double exp) {
 template<typename T>
 constexpr decltype(auto)
 abs(T&& t) {
+  using details::fw;
   return map([](auto x) {
     return std::abs(x);
   }, fw<T>(t));
@@ -243,6 +244,7 @@ abs(T&& t) {
 template<typename T>
 constexpr decltype(auto)
 pnorm(T&& t, double exp) {
+  using details::fw;
   return std::pow(sum(abs(pow(fw<T>(t), exp))), 1 / exp);
 }
 
@@ -251,6 +253,7 @@ pnorm(T&& t, double exp) {
 template<typename T, typename U>
 constexpr decltype(auto)
 is_same(T&& t, U&& u) {
+  using details::fw;
   return map([](auto&& a, auto&& b) {
     return std::is_same_v<decltype(a), decltype(b)>;
   }, fw<T>(t), fw<U>(u));
@@ -259,6 +262,7 @@ is_same(T&& t, U&& u) {
 template<typename T, typename U>
 constexpr decltype(auto)
 equal(T&& t, U&& u) {
+  using details::fw;
   return map([](auto&& a, auto&& b) {
     return a == b;
   }, fw<T>(t), fw<U>(u));
@@ -267,18 +271,21 @@ equal(T&& t, U&& u) {
 template<typename T, typename U>
 constexpr decltype(auto)
 all_equal(T&& t, U&& u) {
+  using details::fw;
   return all_true(equal(fw<T>(t), fw<U>(u)));
 }
 
 template<typename T, typename U>
 constexpr decltype(auto)
 none_equal(T&& t, U&& u) {
+  using details::fw;
   return all_false(equal(fw<T>(t), fw<U>(u)));
 }
 
 template<typename T, typename U>
 constexpr decltype(auto)
 less(T&& t, U&& u) {
+  using details::fw;
   return map([](auto&& a, auto&& b) {
     return a < b;
   }, fw<T>(t), fw<U>(u));
@@ -287,18 +294,21 @@ less(T&& t, U&& u) {
 template<typename T, typename U>
 constexpr decltype(auto)
 all_less(T&& t, U&& u) {
+  using details::fw;
   return all_true(less(fw<T>(t), fw<U>(u)));
 }
 
 template<typename T, typename U>
 constexpr decltype(auto)
 none_less(T&& t, U&& u) {
+  using details::fw;
   return all_false(less(fw<T>(t), fw<U>(u)));
 }
 
 template<typename T, typename U>
 constexpr decltype(auto)
 add(T&& t, U&& u) {
+  using details::fw;
   if constexpr (std::is_arithmetic_v<U>) {
     return map([u](auto&& a) {
       return a + u;
@@ -313,6 +323,7 @@ add(T&& t, U&& u) {
 template<typename T, typename U>
 constexpr decltype(auto)
 subtract(T&& t, U&& u) {
+  using details::fw;
   if constexpr (std::is_arithmetic_v<U>) {
     return map([u](auto&& a) {
       return a - u;
@@ -327,6 +338,7 @@ subtract(T&& t, U&& u) {
 template<typename T, typename U>
 constexpr decltype(auto)
 multiply(T&& t, U&& u) {
+  using details::fw;
   if constexpr (std::is_arithmetic_v<U>) {
     return map([u](auto&& a) {
       return a * u;
@@ -341,6 +353,7 @@ multiply(T&& t, U&& u) {
 template<typename T, typename U>
 constexpr decltype(auto)
 divide(T&& t, U&& u) {
+  using details::fw;
   if constexpr (std::is_arithmetic_v<U>) {
     return map([u](auto&& a) {
       return a / u;
@@ -355,6 +368,7 @@ divide(T&& t, U&& u) {
 template<typename T, typename U>
 constexpr decltype(auto)
 dotprod(T&& t, U&& u) {
+  using details::fw;
   return sum(multiply(fw<T>(t), fw<U>(u)));
 }
 
@@ -362,18 +376,21 @@ dotprod(T&& t, U&& u) {
 template<typename T, typename U>
 constexpr decltype(auto)
 pdist(T&& t, U&& u, double exp) {
+  using details::fw;
   return pnorm(subtract(fw<T>(t), fw<U>(u)), exp);
 }
 
 template<typename T, typename U>
 constexpr decltype(auto)
 hamming(T&& t, U&& u) {
+  using details::fw;
   return sum(_not(equal(fw<T>(t), fw<U>(u))));
 }
 
 template<typename F, typename T, typename U>
 constexpr decltype(auto)
 choose(F&& f, T&& t, U&& u) {
+  using details::fw;
   return map([&f](auto&& a, auto&& b){
     return f() ? a : b;
   }, fw<T>(t), fw<U>(u));
@@ -382,7 +399,8 @@ choose(F&& f, T&& t, U&& u) {
 template<typename T, typename U>
 constexpr decltype(auto)
 wmean(T&& t, U&& u) {
-  return sum(multiply(fw<T>(t), fw<U>(u))) / sum(fw<U>(u));
+  using details::fw;
+  return dotprod(fw<T>(t), fw<U>(u)) / sum(fw<U>(u));
 }
 
 } // namespace tuple
