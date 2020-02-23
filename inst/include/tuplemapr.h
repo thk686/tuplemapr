@@ -13,7 +13,7 @@ namespace keittlab {
 namespace tuple {
 namespace details {
 
-// https://stackoverflow.com/a/25909944/1691101
+// Modified from https://stackoverflow.com/a/25909944/1691101
 
 template<typename T>
 constexpr decltype(auto) fw(std::remove_reference_t<T>&& t)
@@ -30,7 +30,7 @@ constexpr decltype(auto) fw(std::remove_reference_t<T>& t)
 template<typename T>
 constexpr bool is_void = std::is_same_v<void, T>;
 
-// https://stackoverflow.com/a/16905404/1691101
+// Modified from https://stackoverflow.com/a/16905404/1691101
 
 template<typename>
 struct is_std_array : std::false_type {};
@@ -69,7 +69,7 @@ constexpr decltype(auto) map0(F&& f, Ts&&... ts) {
   return std::apply(fw<F>(f), pick<0>(fw<Ts>(ts)...));
 }
 
-// https://codereview.stackexchange.com/a/193436
+// Modified from https://codereview.stackexchange.com/a/193436
 
 template<typename F, std::size_t... Is, typename... Ts>
 constexpr decltype(auto) map_tuple_impl(F&& f, std::index_sequence<Is...>, Ts&&... ts) {
@@ -156,33 +156,43 @@ constexpr decltype(auto) map(F&& f, Ts&&... ts) {
   }
 }
 
-// unary
-
-template<typename T>
+template<typename F, typename... Ts>
 constexpr decltype(auto)
-sum(T&& t) {
+map_or_apply(F&& f, Ts&&... ts) {
   using details::fw;
-  return std::apply([](auto&&... xs) {
-    return (0 + ... + xs);
-  }, fw<T>(t));
+  static_assert(sizeof...(ts) > 0);
+  if constexpr (sizeof...(ts) > 1) {
+    return map(fw<F>(f), fw<Ts>(ts)...);
+  } else {
+    return std::apply(fw<F>(f), fw<Ts>(ts)...);
+  }
+};
+
+template<typename... Ts>
+constexpr decltype(auto)
+sum(Ts&&... ts) {
+  using details::fw;
+  return map_or_apply([](auto&&... xs) {
+    return (xs + ...);
+  }, fw<Ts>(ts)...);
 }
 
-template<typename T>
+template<typename... Ts>
 constexpr decltype(auto)
-mean(T&& t) {
+mean(Ts&&... ts) {
   using details::fw;
-  return std::apply([](auto&&... xs) {
-    return (0 + ... + xs) / static_cast<double>(sizeof...(xs));
-  }, fw<T>(t));
+  return map_or_apply([](auto&&... xs) {
+    return (xs + ...) / static_cast<double>(sizeof...(xs));
+  }, fw<Ts>(ts)...);
 }
 
-template<typename T>
+template<typename... Ts>
 constexpr decltype(auto)
-all_true(T&& t) {
+all_true(Ts&&... ts) {
   using details::fw;
-  return std::apply([](auto&&... xs) {
-    return (true && ... && xs);
-  }, fw<T>(t));
+  return map_or_apply([](auto&&... xs) {
+    return (xs && ...);
+  }, fw<Ts>(ts)...);
 }
 
 template<typename T>
@@ -201,23 +211,24 @@ all_false(T&& t) {
   return all_true(_not(fw<T>(t)));
 }
 
-template<typename T>
+template<typename... Ts>
 constexpr decltype(auto)
-any_true(T&& t) {
-  bool v = false;
+any_true(Ts&&... ts) {
   using details::fw;
-  map_void([&v](auto&& x) {
-    if (x) v = true;
-  }, fw<T>(t));
-  return v;
+  return map_or_apply([](auto&&... xs) {
+    return (xs || ...);
+  }, fw<Ts>(ts)...);
 }
 
-template<typename T>
+template<typename... Ts>
 constexpr decltype(auto)
-any_false(T&& t) {
+any_false(Ts&&... ts) {
   using details::fw;
-  return any_true(_not(t));
+  return map_or_apply([](auto&&... xs) {
+    return (!xs || ...);
+  }, fw<Ts>(ts)...);
 }
+
 
 // not constexpr
 template<typename T>
