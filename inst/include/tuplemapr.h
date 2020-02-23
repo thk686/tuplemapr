@@ -156,9 +156,11 @@ constexpr decltype(auto) map(F&& f, Ts&&... ts) {
   }
 }
 
+namespace details {
+
 template<typename F, typename... Ts>
 constexpr decltype(auto)
-map_or_apply(F&& f, Ts&&... ts) {
+_map(F&& f, Ts&&... ts) {
   using details::fw;
   static_assert(sizeof...(ts) > 0);
   if constexpr (sizeof...(ts) > 1) {
@@ -168,32 +170,7 @@ map_or_apply(F&& f, Ts&&... ts) {
   }
 };
 
-template<typename... Ts>
-constexpr decltype(auto)
-sum(Ts&&... ts) {
-  using details::fw;
-  return map_or_apply([](auto&&... xs) {
-    return (xs + ...);
-  }, fw<Ts>(ts)...);
-}
-
-template<typename... Ts>
-constexpr decltype(auto)
-mean(Ts&&... ts) {
-  using details::fw;
-  return map_or_apply([](auto&&... xs) {
-    return (xs + ...) / static_cast<double>(sizeof...(xs));
-  }, fw<Ts>(ts)...);
-}
-
-template<typename... Ts>
-constexpr decltype(auto)
-all_true(Ts&&... ts) {
-  using details::fw;
-  return map_or_apply([](auto&&... xs) {
-    return (xs && ...);
-  }, fw<Ts>(ts)...);
-}
+} // namespace details
 
 template<typename T>
 constexpr decltype(auto)
@@ -204,18 +181,56 @@ _not(T&& t) {
   }, fw<T>(t));
 }
 
-template<typename T>
+template<typename... Ts>
 constexpr decltype(auto)
-all_false(T&& t) {
-  using details::fw;
-  return all_true(_not(fw<T>(t)));
+sum(Ts&&... ts) {
+  using namespace details;
+  return _map([](auto&&... xs) {
+    return (xs + ...);
+  }, fw<Ts>(ts)...);
+}
+
+template<typename... Ts>
+constexpr decltype(auto)
+product(Ts&&... ts) {
+  using namespace details;
+  return _map([](auto&&... xs) {
+    return (xs * ...);
+  }, fw<Ts>(ts)...);
+}
+
+template<typename... Ts>
+constexpr decltype(auto)
+mean(Ts&&... ts) {
+  using namespace details;
+  return _map([](auto&&... xs) {
+    return (xs + ...) / static_cast<double>(sizeof...(xs));
+  }, fw<Ts>(ts)...);
+}
+
+template<typename... Ts>
+constexpr decltype(auto)
+all_true(Ts&&... ts) {
+  using namespace details;
+  return _map([](auto&&... xs) {
+    return (xs && ...);
+  }, fw<Ts>(ts)...);
+}
+
+template<typename... Ts>
+constexpr decltype(auto)
+all_false(Ts&&... ts) {
+  using namespace details;
+  return _map([](auto&&... xs) {
+    return (!xs && ...);
+  }, fw<Ts>(ts)...);
 }
 
 template<typename... Ts>
 constexpr decltype(auto)
 any_true(Ts&&... ts) {
-  using details::fw;
-  return map_or_apply([](auto&&... xs) {
+  using namespace details;
+  return _map([](auto&&... xs) {
     return (xs || ...);
   }, fw<Ts>(ts)...);
 }
@@ -223,12 +238,11 @@ any_true(Ts&&... ts) {
 template<typename... Ts>
 constexpr decltype(auto)
 any_false(Ts&&... ts) {
-  using details::fw;
-  return map_or_apply([](auto&&... xs) {
+  using namespace details;
+  return _map([](auto&&... xs) {
     return (!xs || ...);
   }, fw<Ts>(ts)...);
 }
-
 
 // not constexpr
 template<typename T>
@@ -450,6 +464,10 @@ constexpr static auto a4 = tuple::map([](auto&&... xs)->double{
 static_assert(tuple::details::is_std_array_v<decltype(a4)>);
 
 static_assert(tuple::sum(a1) == 6);
+static_assert(std::get<0>(tuple::sum(a1, a2)) == 5 &&
+              std::get<1>(tuple::sum(a1, a2)) == 7 &&
+              std::get<2>(tuple::sum(a1, a2)) == 9);
+
 static_assert(tuple::mean(a1) == 2);
 
 constexpr static auto a5 = tuple::map([](double x)->bool{ return x < 4; }, a1);
