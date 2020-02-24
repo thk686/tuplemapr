@@ -7,4 +7,3 @@ using namespace keittlab;
 // [[Rcpp::export]]
 bool link_hook() { return true; }
 
-
