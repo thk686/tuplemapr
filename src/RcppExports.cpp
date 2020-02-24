@@ -6,28 +6,19 @@
 
 using namespace Rcpp;
 
-// test_map
-void test_map();
-RcppExport SEXP _tuplemapr_test_map() {
+// link_hook
+bool link_hook();
+RcppExport SEXP _tuplemapr_link_hook() {
 BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    test_map();
-    return R_NilValue;
-END_RCPP
-}
-// test_choose
-void test_choose();
-RcppExport SEXP _tuplemapr_test_choose() {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    test_choose();
-    return R_NilValue;
+    rcpp_result_gen = Rcpp::wrap(link_hook());
+    return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_tuplemapr_test_map", (DL_FUNC) &_tuplemapr_test_map, 0},
-    {"_tuplemapr_test_choose", (DL_FUNC) &_tuplemapr_test_choose, 0},
+    {"_tuplemapr_link_hook", (DL_FUNC) &_tuplemapr_link_hook, 0},
     {NULL, NULL, 0}
 };
 

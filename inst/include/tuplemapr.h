@@ -13,6 +13,18 @@ namespace keittlab {
 namespace tuple {
 namespace details {
 
+template<typename... Ts>
+using first_of = std::remove_reference_t<
+  std::tuple_element_t<0, std::tuple<Ts...>>
+>;
+
+template<typename T>
+using indices_spanning = std::make_index_sequence<
+  std::tuple_size_v<
+    std::remove_reference_t<T>
+  >
+>;
+
 // Modified from https://stackoverflow.com/a/25909944/1691101
 
 template<typename T>
@@ -58,29 +70,15 @@ struct is_std_pair<std::pair<T, U>> : std::true_type {};
 
 template<typename T>
 constexpr bool is_std_pair_v = is_std_pair<std::decay_t<T>>::value;
-                    
+
 template<std::size_t I, typename... Ts>
 constexpr decltype(auto) pick(Ts&&... ts) {
   return std::make_tuple(std::get<I>(fw<Ts>(ts))...);
 }
 
-template<typename F, typename... Ts>
-constexpr decltype(auto) map0(F&& f, Ts&&... ts) {
-  return std::apply(fw<F>(f), pick<0>(fw<Ts>(ts)...));
-}
-
-// Modified from https://codereview.stackexchange.com/a/193436
-
 template<typename F, std::size_t... Is, typename... Ts>
 constexpr decltype(auto) map_tuple_impl(F&& f, std::index_sequence<Is...>, Ts&&... ts) {
-  using ret = decltype(map0(fw<F>(f), fw<Ts>(ts)...));
-  if constexpr (std::is_lvalue_reference_v<ret>) {
-    return std::tie(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
-  } else if constexpr (std::is_rvalue_reference_v<ret>) {
-    return std::forward_as_tuple(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
-  } else {
-    return std::make_tuple(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
-  }
+  return std::make_tuple(std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...))...);
 }
 
 template<typename F, std::size_t... Is, typename... Ts>
@@ -98,17 +96,10 @@ constexpr void map_void_impl(F&& f, std::index_sequence<Is...>, Ts&&... ts) {
   (std::apply(fw<F>(f), pick<Is>(fw<Ts>(ts)...)), ...);
 }
 
-template<typename... Ts>
-using first_of = std::remove_reference_t<
-  std::tuple_element_t<0, std::tuple<Ts...>>
->;
-
-template<typename T>
-using indices_spanning = std::make_index_sequence<
-  std::tuple_size_v<
-    std::remove_reference_t<T>
-  >
->;
+template<typename F, typename... Ts>
+constexpr decltype(auto) map0(F&& f, Ts&&... ts) {
+  return std::apply(fw<F>(f), pick<0>(fw<Ts>(ts)...));
+}
 
 } // namespace details
 
