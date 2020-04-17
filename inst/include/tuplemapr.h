@@ -28,8 +28,6 @@ using indices_spanning = std::make_index_sequence<
 template<typename T>
 constexpr bool is_void = std::is_same_v<void, T>;
 
-// Modified from https://stackoverflow.com/a/25909944/1691101
-
 template<typename T>
 constexpr decltype(auto) fw(std::remove_reference_t<T>&& t)
 {
@@ -41,8 +39,6 @@ constexpr decltype(auto) fw(std::remove_reference_t<T>& t)
 {
   return std::forward<T>(t);
 }
-
-// Modified from https://stackoverflow.com/a/16905404/1691101
 
 template<typename>
 struct is_std_array : std::false_type {};
