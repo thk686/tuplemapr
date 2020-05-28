@@ -5,7 +5,14 @@
 
 <!-- badges: start -->
 
+[![Lifecycle:
+retired](https://img.shields.io/badge/lifecycle-retired-orange.svg)](https://www.tidyverse.org/lifecycle/#retired)
 <!-- badges: end -->
+
+**Note: This package is no longer developed. I’ve incorporated the this
+code into [kdtools](https://github.com/thk686/kdtools). You can include
+the header using the `// [[Rcpp::depends(kdtools)]]` attribute or the
+`LinkingTo: kdtools` directive in your package DESCRIPTION.**
 
 I found myself using a lot of compile-time fixed-length objects in
 projects like [kdtools](https://github.com/thk686/kdtools) and wanted a
@@ -72,19 +79,3 @@ Given a single tuple-like object and a void-returning invokable,
 type of the first object in the data list. The number of elements in the
 output is also determined by the number of elements in the first data
 object.
-
-## Installation
-
-You can install the released version of tuplemapr from
-[CRAN](https://CRAN.R-project.org) with:
-
-``` r
-install.packages("tuplemapr")
-```
-
-And the development version from [GitHub](https://github.com/) with:
-
-``` r
-# install.packages("devtools")
-devtools::install_github("thk686/tuplemapr")
-```

@@ -16,7 +16,10 @@ knitr::opts_chunk$set(
 # tuplemapr
 
 <!-- badges: start -->
+[![Lifecycle: retired](https://img.shields.io/badge/lifecycle-retired-orange.svg)](https://www.tidyverse.org/lifecycle/#retired)
 <!-- badges: end -->
+
+**Note: This package is no longer developed. I've incorporated the this code into [kdtools](https://github.com/thk686/kdtools). You can include the header using the `// [[Rcpp::depends(kdtools)]]` attribute or the `LinkingTo: kdtools` directive in your package DESCRIPTION.**
 
 I found myself using a lot of compile-time fixed-length objects in projects like [kdtools](https://github.com/thk686/kdtools) and wanted a better framework for manipulating them. Tuplemapr exports [a C++ header](https://github.com/thk686/tuplemapr/blob/master/inst/include/tuplemapr.h) that defines functions for applying invokables on tuples or tuple-like objects, including ```std::array``` and ```std::pair```. At its core, tuplemapr defines a function ```tuple::map```, which has the signature:
 ```
@@ -66,17 +69,3 @@ auto x = tuple::map(f, a, b, c); // return array
 
 Given a single tuple-like object and a void-returning invokable, ```tuple::map``` behaves just like a tuple for-each. In other cases, ```tuple::map``` will return either a pair, array or tuple, depending on the type of the first object in the data list. The number of elements in the output is also determined by the number of elements in the first data object.
 
-## Installation
-
-You can install the released version of tuplemapr from [CRAN](https://CRAN.R-project.org) with:
-
-``` r
-install.packages("tuplemapr")
-```
-
-And the development version from [GitHub](https://github.com/) with:
-
-``` r
-# install.packages("devtools")
-devtools::install_github("thk686/tuplemapr")
-```
